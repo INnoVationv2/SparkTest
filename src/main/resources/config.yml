@@ -1,0 +1,31 @@
+oracles:
+  - name: snpb
+    url: jdbc:oracle:thin:@192.168.1.17:1521:helowin
+    username: TLMP_SNPB
+    password: "123456"
+  - name: INV
+    url: jdbc:oracle:thin:@INV
+    username: TLMP_INV
+    password: "123456"
+
+tables:
+  - name: bank
+    incremental_load: false
+    target_hive_table: bank
+    target_schema: bank_schema
+    partition: false
+
+  - name: item
+    incremental_load: true
+    incremental_rule:
+      - incremental_field: item_id
+        join_table: item
+        join_field: item_id
+      - incremental_field: last_action_date
+        join_table: item
+        join_field: last_action_date
+    target_hive_table: item
+    target_schema: item_schema
+    partition: true
+    partition_column:
+      - stmt_date

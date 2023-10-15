@@ -5,6 +5,7 @@ import org.yaml.snakeyaml.Yaml
 import java.util
 import scala.jdk.CollectionConverters._
 
+case class Config(instances: List[DataBaseConf], tables: List[TableConf])
 
 object Config {
   private var config: Config = _
@@ -21,31 +22,31 @@ object Config {
     val inputStream = getClass.getClassLoader.getResourceAsStream("config.yml")
     val yamlData = yaml.load(inputStream).asInstanceOf[util.Map[String, Any]].asScala
 
-    // load instance config
-    val instanceConfigs = yamlData("oracles").asInstanceOf[util.List[Any]].asScala
-    val instanceList = instanceConfigs.map(instanceConf => {
+    val instances = loadInstances(yamlData)
+    val tables = loadTables(yamlData)
+
+    Config(instances, tables)
+  }
+
+  private def loadInstances(yamlData: collection.mutable.Map[String, Any]): List[DataBaseConf] = {
+    val instanceConfigs = yamlData.getOrElse("oracles", List.empty).asInstanceOf[util.List[Any]].asScala
+    instanceConfigs.map { instanceConf =>
       val instanceConfMap = instanceConf.asInstanceOf[util.Map[String, String]].asScala.toMap
       new DataBaseConf(instanceConfMap)
-    }).toList
+    }.toList
+  }
 
-    // load table config
-    val tableConfigs = yamlData("tables").asInstanceOf[util.List[Any]].asScala
-    val tableList = tableConfigs.map(tableConfig => {
+  private def loadTables(yamlData: collection.mutable.Map[String, Any]): List[TableConf] = {
+    val tableConfigs = yamlData.getOrElse("tables", List.empty).asInstanceOf[util.List[Any]].asScala
+    tableConfigs.map { tableConfig =>
       val tableConfMap = tableConfig.asInstanceOf[util.Map[String, Any]].asScala.toMap
       new TableConf(tableConfMap)
-    }).toList
-
-    Config(instances = instanceList, tables = tableList)
+    }.toList
   }
 }
 
-case class Config(instances: List[DataBaseConf], tables: List[TableConf])
-
-case class DataBaseConf(name: String,
-                        url: String,
-                        username: String,
-                        password: String) {
-  def this(confMap: Map[String, String]) = {
+case class DataBaseConf(name: String, url: String, username: String, password: String) {
+  def this(confMap: Map[String, String]) {
     this(
       name = confMap("name"),
       url = confMap("url"),
@@ -71,9 +72,7 @@ case class TableConf(name: String,
 
     if (loadType == "incremental_load") {
       val incrementalRuleConfigs = confMap("incremental_fields").asInstanceOf[util.List[String]].asScala
-      incrementalFields = incrementalRuleConfigs.map(field => {
-        IncrementalField(field)
-      }).toList
+      incrementalFields = incrementalRuleConfigs.map(IncrementalField).toList
     }
 
     if (loadType == "join_with_other_table") {
@@ -97,7 +96,8 @@ case class IncrementalField(field: String) extends BaseIncrementalRule
 case class JoinRule(incrementalField: String,
                     joinField: String,
                     joinTable: String,
-                    joinTableIncrementalField: String) extends BaseIncrementalRule {
+                    joinTableIncrementalField: String
+                   ) extends BaseIncrementalRule {
   def this(confMap: Map[String, String]) {
     this(
       incrementalField = confMap("incremental_field"),

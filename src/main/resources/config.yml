@@ -10,22 +10,24 @@ oracles:
 
 tables:
   - name: bank
+    load_type: full_load
     incremental_load: false
-    target_hive_table: bank
-    target_schema: bank_schema
     partition: false
 
-  - name: item
-    incremental_load: true
-    incremental_rule:
-      - incremental_field: item_id
-        join_table: item
-        join_field: item_id
-      - incremental_field: last_action_date
-        join_table: item
-        join_field: last_action_date
-    target_hive_table: item
-    target_schema: item_schema
+  - name: bus_audit
+    load_type: incremental_load
+    incremental_fields:
+      - time_stamp
+      - id
     partition: true
-    partition_column:
+    partition_columns:
       - stmt_date
+
+  - name: bus_audit_entry
+    load_type: join_with_other_table
+    join_rule:
+      incremental_field: audit_id
+      join_field: id
+      join_table: bus_audit
+      join_table_incremental_field: time_stamp
+    partition: false

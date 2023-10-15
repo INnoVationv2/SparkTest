@@ -56,47 +56,56 @@ case class DataBaseConf(name: String,
 }
 
 case class TableConf(name: String,
-                     incrementalLoad: Boolean,
-                     var incrementalRules: List[IncrementalRule],
-                     targetHiveTable: String,
-                     targetSchema: String,
+                     loadType: String,
+                     var incrementalFields: List[IncrementalField],
+                     var joinRule: JoinRule,
                      partition: Boolean,
                      var partitionColumns: List[String]) {
   def this(confMap: Map[String, Any]) {
     this(
       name = confMap("name").asInstanceOf[String],
-      incrementalLoad = confMap("incremental_load").asInstanceOf[Boolean],
-      incrementalRules = null,
-      targetHiveTable = confMap("target_hive_table").asInstanceOf[String],
-      targetSchema = confMap("target_schema").asInstanceOf[String],
+      loadType = confMap("load_type").asInstanceOf[String],
+      incrementalFields = null,
+      joinRule = null,
       partition = confMap("partition").asInstanceOf[Boolean],
       partitionColumns = null
     )
 
-    if (incrementalLoad) {
-      val incrementalRuleConfigs = confMap("incremental_rule").asInstanceOf[util.List[util.Map[String, String]]].asScala
-      incrementalRules = incrementalRuleConfigs.map(rule => {
-        new IncrementalRule(rule.asScala.toMap)
+    if (loadType == "incremental_load") {
+      val incrementalRuleConfigs = confMap("incremental_fields").asInstanceOf[util.List[String]].asScala
+      incrementalFields = incrementalRuleConfigs.map(field => {
+        IncrementalField(field)
       }).toList
     }
 
+    if (loadType == "join_with_other_table") {
+      val joinRuleConf = confMap("join_rule").asInstanceOf[util.Map[String, String]].asScala
+      joinRule = new JoinRule(joinRuleConf.toMap)
+    }
+
     if (partition) {
-      partitionColumns = confMap("partition_column").asInstanceOf[util.List[String]].asScala.toList
+      partitionColumns = confMap("partition_columns").asInstanceOf[util.List[String]].asScala.toList
     }
   }
 }
 
-case class IncrementalRule(incrementalField: String,
-                               joinTable: String,
-                               joinFields: String) {
+class BaseIncrementalRule() {
   var lastVal: String = _
   var maxVal: String = _
+}
 
-  def this(confMap: Map[String, String]) = {
+case class IncrementalField(field: String) extends BaseIncrementalRule
+
+case class JoinRule(incrementalField: String,
+                    joinField: String,
+                    joinTable: String,
+                    joinTableIncrementalField: String) extends BaseIncrementalRule {
+  def this(confMap: Map[String, String]) {
     this(
-      incrementalField = confMap("incremental_field"),
+      incrementalField = confMap("incremental_field").asInstanceOf[String],
+      joinField = confMap("join_field").asInstanceOf[String],
       joinTable = confMap("join_table"),
-      joinFields = confMap("join_field")
+      joinTableIncrementalField = confMap("join_table_incremental_field").asInstanceOf[String]
     )
   }
 }

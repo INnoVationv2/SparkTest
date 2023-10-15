@@ -57,18 +57,16 @@ case class DataBaseConf(name: String,
 
 case class TableConf(name: String,
                      loadType: String,
-                     var incrementalFields: List[IncrementalField],
-                     var joinRule: JoinRule,
-                     partition: Boolean,
-                     var partitionColumns: List[String]) {
+                     partition: Boolean) {
+  var incrementalFields: List[IncrementalField] = _
+  var joinRule: JoinRule = _
+  var partitionColumns: List[String] = _
+
   def this(confMap: Map[String, Any]) {
     this(
       name = confMap("name").asInstanceOf[String],
       loadType = confMap("load_type").asInstanceOf[String],
-      incrementalFields = null,
-      joinRule = null,
       partition = confMap("partition").asInstanceOf[Boolean],
-      partitionColumns = null
     )
 
     if (loadType == "incremental_load") {
@@ -102,10 +100,10 @@ case class JoinRule(incrementalField: String,
                     joinTableIncrementalField: String) extends BaseIncrementalRule {
   def this(confMap: Map[String, String]) {
     this(
-      incrementalField = confMap("incremental_field").asInstanceOf[String],
-      joinField = confMap("join_field").asInstanceOf[String],
+      incrementalField = confMap("incremental_field"),
+      joinField = confMap("join_field"),
       joinTable = confMap("join_table"),
-      joinTableIncrementalField = confMap("join_table_incremental_field").asInstanceOf[String]
+      joinTableIncrementalField = confMap("join_table_incremental_field")
     )
   }
 }
